@@ -118,8 +118,38 @@
 - `npm run test` — 13 files / **15 tests** passed (Header active 표시 1건 추가).
 - 11개 경로 curl — 모두 HTTP 200 (Vite SPA fallback).
 
-**다음 — P04 도메인 타입 + Supabase 클라이언트**
-- `src/types/domain.ts` — Business/Cluster/Bid/CourtCase/Report 등 5개 인터페이스
-- `src/lib/supabase.ts` — createClient + 환경변수 검증 + 타입 안전 헬퍼
-- `src/lib/masking.ts` — maskBizNo / maskRepName / maskAddress + 각 5개 단위 테스트
-- `src/lib/format.ts` — formatKRW / formatPercent / formatRatio
+---
+
+## 2026-05-10 — P04 도메인 타입 + 마스킹 + Supabase 클라이언트
+
+**구현**
+- `src/types/domain.ts` — `RiskLevel`, `SignalLevel`, `Business`, `Cluster`(+`ClusterStats`/`ClusterSignal`), `Bid`, `CourtCase`(+`CourtCasePattern`), `Report`. P04 명세의 5개 인터페이스 + 그 안의 nested 타입 분리.
+- `src/lib/masking.ts`
+  - `maskBizNo`: 입력 노이즈(하이픈/공백) 제거 후 `\d{3}-XX-\d{5}`. 10자리 아니면 그대로.
+  - `maskRepName`: 한 글자 성씨 기본 + 9개 복성 화이트리스트(남궁/황보/제갈 등). 한글 2자 이상에만 적용.
+  - `maskAddress`: 1차 동/읍/면/리 매칭, 2차 도로명(로/길) 매칭. 둘 다 실패하면 그대로.
+- `src/lib/masking.test.ts` — 함수당 5건씩 총 15 테스트.
+- `src/lib/format.ts` — `formatKRW`(억/만/원 3단계, .0 제거) · `formatPercent` · `formatRatio`. 비유한값은 `'—'`.
+- `src/lib/supabase.ts` — `createClient` + `client = null` fallback (env 누락 시) + `ensureClient()` 가드 + 헬퍼 6개: `listClusters` / `getCluster` / `listBusinessesByBizNos` / `listBids` / `listCourtCases` / `getCourtCase`.
+
+**의도적 미구현**
+- **School 인터페이스 미정의** — P04 명세는 5개 (Business/Cluster/Bid/CourtCase/Report) 뿐. School 은 P05 시드 또는 P08 학교별 보기에서 추가 예정.
+- **format.ts 테스트 미작성** — P04 명세는 masking 만 5건씩 테스트 명시. format 은 시각 검증 단계인 P06 이후에 결합 테스트로 다룸.
+- **camelCase ↔ snake_case 매핑** — DB 컬럼은 P12 마이그레이션에서 snake_case 로 정의 예정. 현재 `as unknown as Cluster[]` 직접 캐스팅, 매핑 어댑터는 P12 작업.
+
+**Mock fallback 전략**
+- `supabase.ts` 는 env 부재 시 client = null. 호출 시 명확한 한국어 에러("`VITE_USE_MOCK=true` 로 시작하세요").
+- P05 의 hooks(useClusters 등)가 `VITE_USE_MOCK` 토글로 mockApi vs supabase 자동 선택.
+
+**파일 정리**
+- `src/lib/.gitkeep`(P02 에서 cn.ts 만들 때 누락), `src/types/.gitkeep` 삭제.
+
+**검증 (2026-05-10)**
+- `npm run typecheck` — 통과.
+- `npm run test` — 14 files / **30 tests** passed (3.52s, masking 15건 추가).
+
+**다음 — P05 시드 + Mock 데이터 레이어**
+- `src/lib/seed/{clusters,bids,schools,cases,reports}.ts` — 가짜임이 명백한 샘플(영업코드 999XX, "샘플-XXX" 패턴)
+- `src/lib/mockApi.ts` — supabase.ts 와 동일 시그니처 + 200~600ms 지연
+- `src/hooks/{useClusters,useCluster,useSchools,useCases}.ts` — `VITE_USE_MOCK` 토글로 mock/실제 자동 선택
+- School 도메인 타입 추가
