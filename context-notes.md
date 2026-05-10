@@ -148,8 +148,39 @@
 - `npm run typecheck` — 통과.
 - `npm run test` — 14 files / **30 tests** passed (3.52s, masking 15건 추가).
 
-**다음 — P05 시드 + Mock 데이터 레이어**
-- `src/lib/seed/{clusters,bids,schools,cases,reports}.ts` — 가짜임이 명백한 샘플(영업코드 999XX, "샘플-XXX" 패턴)
-- `src/lib/mockApi.ts` — supabase.ts 와 동일 시그니처 + 200~600ms 지연
-- `src/hooks/{useClusters,useCluster,useSchools,useCases}.ts` — `VITE_USE_MOCK` 토글로 mock/실제 자동 선택
-- School 도메인 타입 추가
+---
+
+## 2026-05-10 — P05 시드 + Mock 데이터 레이어
+
+**구현**
+- `types/domain.ts` — `School` 인터페이스 추가.
+- `lib/supabase.ts` — `listSchools` / `getSchool` 헬퍼 추가 (`ListSchoolsFilters`).
+- 시드 5개:
+  - `seed/clusters.ts` — 12건 (high 4 + mid 5 + low 3). 사업자번호 `999XX` prefix, 상호 `(주)데모/샘플` 표기, 주소 `가상로/가상대로` 등 분명히 가짜. `businessesSeed` flat 리스트 함께 export.
+  - `seed/schools.ts` — 부산 16개 구·군 분포 50개. 코드 `PSN-001`, 모든 학교명에 `(가상)` 표기.
+  - `seed/bids.ts` — `mulberry32(42)` 결정적 PRNG 로 24개월치 응찰 생성. 클러스터 멤버 1-2명 + filler 2-4명 mix. 위험도별 낙찰 확률 차등(high 0.42 / mid 0.28 / low 0.16).
+  - `seed/cases.ts` — 가상 판례 8건. 사건번호·법원·죄명 구조는 실제 형법 §315(입찰방해)·§347(사기) 패턴 따름. 결과 mix (유죄 6 / 일부유죄 1 / 무죄 1).
+  - `seed/reports.ts` — 제보 1 + 이의제기 1 + 일반 제보 1.
+- `lib/mockApi.ts` — supabase.ts 와 동일 시그니처 8개 함수, 200~600ms 랜덤 지연, 필터링·페이지네이션 동작.
+- `hooks/_api.ts` — selector: `VITE_USE_MOCK==='true'` 또는 Supabase env 부재 시 mock 활성화. `isUsingMock` 노출.
+- `hooks/{useClusters,useCluster,useSchools,useCases}.ts` — 4개. 패턴 일관: cancellation flag + `reloadKey` + `JSON.stringify(filters)` dep.
+- `DashboardPage` — `useClusters()` + 콘솔 로그 (`[Ghost Tracker] mode=mock · clusters=12`). P06 에서 다시 교체.
+
+**의도적 결정**
+- **bids 결정적 생성**: 하드코딩 수백 줄 대신 PRNG. 재현 가능 + 코드 짧음.
+- **filler 사업자 60명** (`999800XXXX`): 클러스터 외부 응찰자 풀로 자연스러운 응찰 다양성 확보.
+- **`hooks/_api.ts` 언더스코어 prefix**: hooks 내부 헬퍼임을 표시. 페이지에서 직접 import 가능하지만 비공식 API.
+- **filter dep 패턴**: `JSON.stringify` → `JSON.parse` 라운드트립으로 deep equality. 4 hooks 일관 패턴 유지.
+
+**검증 (2026-05-10)**
+- `npm run typecheck` — 통과.
+- `npm run test` — 14 files / 30 tests passed (변경 없음 — 시드/mock/hooks 는 P02 컴포넌트 테스트에 영향 없음).
+- `npm run dev` — HTTP 200, HMR 반영, react-router-dom 의존성 자동 최적화.
+- 브라우저 콘솔 (사용자 검증) — `[Ghost Tracker] mode=mock · clusters=12` 출력 예상.
+
+**다음 — P06 메인 대시보드**
+- Hero (DisplayHeading + 부제 + 본문)
+- Stats Strip 4분할 (실수치)
+- 좌측 sticky 사이드바 (검색 + 위험도/지역/신호 필터, filterStore 연동)
+- 우측 ClusterCard 리스트 (5개씩 페이지네이션, expanded 상태 관리)
+- TimelineBars (24개 막대) + NetworkGraph (SVG 원형 배치) 컴포넌트

@@ -89,3 +89,13 @@ export interface Report {
   status: 'received' | 'reviewing' | 'resolved'
   createdAt: string
 }
+
+export interface School {
+  code: string                     // 가상 코드 PSN-001 형식
+  name: string
+  address: string
+  district: string                 // 부산 16개 구·군
+  lat: number
+  lon: number
+  studentCount: number
+}

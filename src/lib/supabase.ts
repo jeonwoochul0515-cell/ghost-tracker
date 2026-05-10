@@ -11,6 +11,7 @@ import type {
   Business,
   Cluster,
   CourtCase,
+  School,
 } from '@/types/domain'
 import type { RiskFilter } from '@/stores/filterStore'
 
@@ -133,4 +134,34 @@ export async function getCourtCase(id: string): Promise<CourtCase | null> {
     .maybeSingle()
   if (error) throw error
   return (data as unknown as CourtCase) ?? null
+}
+
+export interface ListSchoolsFilters {
+  district?: string | null
+  query?: string
+  limit?: number
+}
+
+export async function listSchools(
+  filters: ListSchoolsFilters = {},
+): Promise<School[]> {
+  const c = ensureClient()
+  let q = c.from('schools').select('*').order('name', { ascending: true })
+  if (filters.district) q = q.eq('district', filters.district)
+  if (filters.query) q = q.ilike('name', `%${filters.query}%`)
+  if (filters.limit) q = q.limit(filters.limit)
+  const { data, error } = await q
+  if (error) throw error
+  return (data as unknown as School[]) ?? []
+}
+
+export async function getSchool(code: string): Promise<School | null> {
+  const c = ensureClient()
+  const { data, error } = await c
+    .from('schools')
+    .select('*')
+    .eq('code', code)
+    .maybeSingle()
+  if (error) throw error
+  return (data as unknown as School) ?? null
 }
