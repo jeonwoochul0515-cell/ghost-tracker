@@ -1,0 +1,46 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main, master]
+
+jobs:
+  supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Link project
+        run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      - name: Push migrations
+        run: supabase db push
+      - name: Deploy functions
+        run: |
+          supabase functions deploy submit-report
+          supabase functions deploy ingest-eat
+          supabase functions deploy ingest-nts
+          supabase functions deploy normalize-addresses
+          supabase functions deploy recompute-clusters
+
+  vercel:
+    runs-on: ubuntu-latest
+    needs: supabase
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'

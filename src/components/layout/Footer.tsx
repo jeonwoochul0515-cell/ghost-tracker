@@ -1,4 +1,5 @@
-// 사이트 푸터 — 운영주체·출처·면책 3분할
+// 사이트 푸터 — 운영주체·출처·면책·법률 4분할
+import { Link } from 'react-router-dom'
 import { cn } from '@/lib/cn'
 
 interface FooterProps {
@@ -8,13 +9,19 @@ interface FooterProps {
 export function Footer({ className }: FooterProps) {
   return (
     <footer className={cn('border-t border-line mt-16 relative z-10', className)}>
-      <div className="max-w-[1400px] mx-auto px-8 py-12 grid grid-cols-1 md:grid-cols-3 gap-8 text-sm">
+      <div className="max-w-[1400px] mx-auto px-8 py-12 grid grid-cols-1 md:grid-cols-4 gap-8 text-sm">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-ink-dim mb-3">
             Operator
           </p>
           <p className="text-ink-dim leading-relaxed">
             법무법인 청송과 협력하는 부산 시민 공익 모니터링 도구.
+          </p>
+          <p className="mt-2 text-ink-faint text-xs">
+            책임자:{' '}
+            <a href="mailto:contact@ghostbid.kr" className="hover:text-ink underline underline-offset-4">
+              contact@ghostbid.kr
+            </a>
           </p>
         </div>
         <div>
@@ -30,11 +37,30 @@ export function Footer({ className }: FooterProps) {
         </div>
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-ink-dim mb-3">
+            Legal
+          </p>
+          <ul className="space-y-1 text-ink-dim">
+            <li>
+              <Link to="/methodology" className="hover:text-ink">방법론</Link>
+            </li>
+            <li>
+              <Link to="/report" className="hover:text-ink">제보·이의제기</Link>
+            </li>
+            <li>
+              <Link to="/terms" className="hover:text-ink">이용약관</Link>
+            </li>
+            <li>
+              <Link to="/privacy" className="hover:text-ink">개인정보처리방침</Link>
+            </li>
+          </ul>
+        </div>
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-ink-dim mb-3">
             Disclaimer
           </p>
           <p className="text-ink-faint leading-relaxed text-xs">
             본 정보는 공개정보 통계 결합으로 산출된 추정이며 위법 단정이 아닙니다.
-            이의제기는 24시간 내 비공개 처리됩니다.
+            이의제기는 24시간 내 비공개 처리됩니다. 광고·후원 없음.
           </p>
         </div>
       </div>

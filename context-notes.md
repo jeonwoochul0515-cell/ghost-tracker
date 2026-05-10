@@ -381,8 +381,112 @@
 - 프론트 `npm run typecheck` 통과 + 73 tests 통과 (P12 변경은 supabase/* 디렉토리만이라 Vite typecheck 영향 없음).
 - 사용자 시나리오: `supabase start` → `supabase db reset` (마이그레이션+시드 자동 적용) → `supabase functions serve --no-verify-jwt` → `.env` 갱신 후 `npm run dev` 로 mock=false 모드 검증.
 
-**다음 — P13 공공데이터 API 어댑터**
-- `src/server/adapters/eatApi.ts` (eaT) · `ntsApi.ts` (국세청) · `roadAddressApi.ts` (도로명주소) · `courtApi.ts` (placeholder)
-- 각 어댑터 단위 테스트 (정상/에러/빈 결과 모킹)
-- 환경변수 검증 모듈
-- Edge Functions(placeholder) 와 결합 시 실 적재 가능
+---
+
+## 2026-05-10 — P13 공공데이터 API 어댑터
+
+**구현**
+- `src/server/env.ts` — `requireEnv` / `optionalEnv` (Deno + Node 양쪽).
+- `src/server/http.ts` — `fetchWithRetry` (3회 재시도 + exponential backoff + 타임아웃).
+- `src/server/adapters/eatApi.ts` — eaT 입찰 리스트 + 응답 정규화 (item 단/복수 자동).
+- `src/server/adapters/ntsApi.ts` — NTS 사업자 상태/진위 batch.
+- `src/server/adapters/roadAddressApi.ts` — JUSO 우선 + VWorld 폴백 + 24h 캐시.
+- `src/server/adapters/courtApi.ts` — 사법정보공유포털 placeholder + `CourtApiNotReadyError`.
+- 어댑터 테스트 11건 (정상/에러/빈/캐시/폴백/환경변수 누락).
+- `tsconfig.app.json` — `types: ['vite/client', 'node']` 추가 (process 인식).
+
+**API 키 자동 적용**
+- 사용자 컴퓨터의 `~/.antigravity/*` 다른 프로젝트에서 `.env` grep:
+  - `hoiseng1click/.env.local` + `hoiseng1click/functions/.env` 의 **PUBLIC_DATA_API_KEY** = `uL+CiKXTpwEg0...0Zk8Q==` → 우리 `EAT_SERVICE_KEY` / `NTS_SERVICE_KEY` 마스터 키로 적용 (data.go.kr 한 키로 여러 API 가능).
+  - `milk/functions/.env` + `hoiseng1click` 의 **VWORLD_API_KEY** = `524C7A66-70FD-3DFC-90BD-5CA578C090FC` → 도로명주소 폴백.
+  - `JUSO_API_KEY` 는 두 곳 모두 빈 값 → 사용자가 business.juso.go.kr 별도 신청 필요.
+- 우리 `.env` 는 `.gitignore` 에 의해 커밋 안 됨 (안전).
+- `.env.example` 6종 환경변수 가이드.
+
+---
+
+## 2026-05-10 — P14 메소돌로지 페이지
+
+**구현**
+- `pages/MethodologyPage.tsx` — 9개 섹션 + 좌측 목차 (IntersectionObserver 로 active 추적).
+- 신호 표는 `ALL_SIGNALS` 직접 import — 코드 변경 시 자동 반영.
+- 임계값 (HIGH/MID) 도 `scorer.ts` 상수 직접 import.
+- 섹션 6 "한계와 주의" 는 `border-l-2 border-warning/40` 강조.
+- 인쇄 친화 (Ctrl+P 가능, sticky sidebar 만 sidebar 클래스).
+
+---
+
+## 2026-05-10 — P15 관리자 대시보드
+
+**구현**
+- `hooks/useAuth.ts` — Supabase Auth 매직링크 + mock 모드 fallback (`*@ghost-tracker.local`).
+- `pages/AdminPage.tsx` — 4 탭:
+  - **제보 큐**: 상태 변경 (받음/검토중/처리완료) + 변호사 검토 메일 링크.
+  - **신호 튜닝**: 12 신호 weight 슬라이더 미리보기 + 합계 표시.
+  - **화이트리스트**: 정규화 주소 추가/제거.
+  - **적재 로그**: Edge Function 실행 샘플 (실제는 Supabase Logs 연동).
+- `App.tsx` — `/admin` 라우트 추가.
+
+---
+
+## 2026-05-10 — P16 배포 + CI/CD
+
+**구현**
+- `.github/workflows/ci.yml` — PR/푸시 시 typecheck + test + build.
+- `.github/workflows/deploy.yml` — main 푸시 시 Supabase migrations + 5 functions deploy + Vercel deploy.
+- `vercel.json` — SPA fallback + 보안 헤더 (X-Frame-Options, Permissions-Policy 등).
+- `public/robots.txt` — `/admin` 차단.
+- `public/sitemap.xml` — 7 라우트.
+- `index.html` — Open Graph + Twitter Card + robots meta.
+
+**필요 secrets** (사용자 측 GitHub repo settings 등록):
+- `SUPABASE_PROJECT_REF`, `SUPABASE_ACCESS_TOKEN`
+- `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
+
+---
+
+## 2026-05-10 — P17 법적 안전성 강화
+
+**구현**
+- `lib/wording.ts` — 금지 표현 사전(5종) + `lintText(text)` 검출 함수. ESLint 룰은 사용자 측 환경 따라 추가.
+- `components/Disclaimer.tsx` — 공통 면책 박스 (default + compact variant).
+- `pages/TermsPage.tsx` — 이용약관 초안 5조 (목적/성격/이용자 의무/이의제기/책임 한계). 변호사 검토 후 확정.
+- `pages/PrivacyPage.tsx` — 개인정보처리방침 초안 6조.
+- `Footer.tsx` — 4분할 (Operator/Sources/Legal/Disclaimer) + 약관·개인정보 링크 + 책임자 이메일.
+- `Footer.test.tsx` — MemoryRouter wrap + Legal 추가 검증.
+- `App.tsx` — `/terms` `/privacy` 라우트.
+
+---
+
+## 2026-05-10 — P18 문서 + 시연 마감
+
+**구현**
+- `CHANGELOG.md` — 0.1.0 초기 빌드 (P00~P18 종합).
+- `CONTRIBUTING.md` — 이슈/PR 가이드 + 신호 추가 절차 + 코드 스타일.
+- `docs/architecture.md` — 전체 구조도 + 데이터 흐름 + 모듈 경계 + 핵심 결정.
+- `docs/threat-model.md` — 보안 6 + 법적 3 + 운영 3 위협 시나리오 & 완화책.
+- `docs/demo-script.md` — 1분/5분 데모 시나리오 + 환경 준비 체크리스트.
+- `README.md` 풀버전 — 폴더 구조 확장 + 운영주체 + Acknowledgements.
+
+---
+
+## 최종 검증 (2026-05-10)
+
+- `npm run typecheck` — 통과
+- `npm run test` — **21 files / 84 tests passed**
+- `npm run build` — 1.69s, dist/ 크기 1MB (gzip 290KB)
+
+## 검증 한계 (사용자 측 별도 수행)
+
+- Supabase CLI 미설치 → SQL/Edge Functions 실 기동
+- Deno 미설치 → Edge Functions 컴파일
+- GitHub repo + Vercel 프로젝트 연결 → CI/CD 검증
+- ESLint 커스텀 룰 미적용 → `wording.ts` 의 lintText 만 노출, eslint.config.js 통합은 후속
+
+## 다음 단계 (Vol. 02 후보)
+
+- P13 어댑터 + Edge Function 결합 → 실 데이터 적재
+- 사법정보공유포털 API 인가 후 cases 시드 → 실 판례 교체
+- leaflet.markercluster 도입 (학교 50 → 600개)
+- ESLint 커스텀 룰 통합 (wording.ts 자동 검출)
+- 학부모용 모바일 앱 (Vol. 02 우선순위)

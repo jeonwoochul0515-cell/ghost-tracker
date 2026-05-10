@@ -12,6 +12,9 @@ import { CaseDetailPage } from '@/pages/CaseDetailPage'
 import { ReportPage } from '@/pages/ReportPage'
 import { MethodologyPage } from '@/pages/MethodologyPage'
 import { ApiPage } from '@/pages/ApiPage'
+import { AdminPage } from '@/pages/AdminPage'
+import { TermsPage } from '@/pages/TermsPage'
+import { PrivacyPage } from '@/pages/PrivacyPage'
 
 function App() {
   return (
@@ -28,6 +31,9 @@ function App() {
         <Route path="/report" element={<ReportPage />} />
         <Route path="/methodology" element={<MethodologyPage />} />
         <Route path="/api" element={<ApiPage />} />
+        <Route path="/admin" element={<AdminPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
       </Routes>
       <Footer />
     </BrowserRouter>

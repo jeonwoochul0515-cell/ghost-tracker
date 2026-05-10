@@ -116,6 +116,27 @@ src/
 - 사업자번호·대표자명·주소는 마스킹 표시되며, 이의제기는 24시간 내 비공개 처리됩니다.
 - 자세한 방법론과 한계는 `/methodology` 페이지 참고.
 
+## 운영주체
+
+법무법인 청송 협력 / 부산 시민 공익 모니터링 도구.
+
+- 책임자: contact@ghostbid.kr
+- 자문 변호사: 김창희 변호사
+
+## 기여 / 변경 이력
+
+- 기여 가이드: `CONTRIBUTING.md`
+- 변경 이력: `CHANGELOG.md`
+- 아키텍처: `docs/architecture.md`
+- 위협 모델: `docs/threat-model.md`
+- 시연 스크립트: `docs/demo-script.md`
+
+## Acknowledgements
+
+- 공공데이터포털 / 도로명주소 / 사법정보공유포털 — 공공누리 1유형
+- 법무법인 청송 — 법적 검토
+- 부산 시민·기자·연구자 자원봉사
+
 ## 라이선스
 
 - 코드: MIT
