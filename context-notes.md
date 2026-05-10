@@ -208,11 +208,36 @@
 - `npm run test` — 14 files / 30 tests passed (P06 컴포넌트는 시각/통합 영역이라 단위 테스트 미작성 — 명세도 ClusterCard 테스트 명시 X).
 - `npm run dev` — HTTP 200, HMR 자동 반영, @supabase/supabase-js 의존성 자동 최적화.
 
-**다음 — P07 클러스터 상세 페이지**
-- 상단 패널 (클러스터 ID/기간/위치/위험도 + 의심도 게이지)
-- 신호 패널 4분할
-- 구성 사업자 테이블 + 행 클릭 디테일 슬라이드
-- Recharts ComposedChart (월별 응찰/낙찰)
-- react-leaflet 학교 분포 지도
-- 매칭 판례 섹션 (P09 의 cases 와 연동)
-- sticky 액션 바
+---
+
+## 2026-05-10 — P07 클러스터 상세 페이지
+
+**구현**
+- `aggregate.ts` 확장 — `MonthBucket.winAmount` 추가 + `aggregateSchoolWins(bids, cluster)` (학교별 낙찰 횟수).
+- `globals.css` — `@import 'leaflet/dist/leaflet.css'` 로 leaflet 기본 스타일 로드.
+- `features/clusters/RiskGauge.tsx` — SVG 반원 호 + stroke-dasharray 로 % 표현. high=danger / mid=warning / low=safe.
+- `features/clusters/SignalPanel.tsx` — 4분할 카드 (동일주소·가족·신규·폐업). cluster.signals 의 substring 매칭 결과 표시. 미매칭 = "관측되지 않음".
+- `features/clusters/MemberDrawer.tsx` — fixed right slide-in (`translate-x-full ↔ translate-x-0`) + backdrop blur. ESC 키 + 배경 클릭으로 닫기.
+- `features/clusters/ClusterTimeSeriesChart.tsx` — Recharts ComposedChart, 좌측 Y(응찰 막대) + 우측 Y(낙찰액 선). XAxis 'YY-MM' 짧은 라벨, IBM Plex Mono.
+- `features/clusters/SchoolMap.tsx` — react-leaflet `MapContainer` + `CircleMarker`(radius = `sqrt(wins) * 4 + 6`) + `Popup`. 부산 중심 (35.18, 129.0756) zoom 11. OpenStreetMap 타일.
+- `features/clusters/matching.ts` — `matchCases(cluster, cases)` 점수 기반 매칭 (sharedAddress + 동일주소 시그널 = +3 등). top 3 반환.
+- `features/clusters/MatchedCases.tsx` — 매칭 판례 카드 3개 + Link to `/cases/:id`. "유사도 N" 표시.
+- `features/clusters/ActionBar.tsx` — sticky bottom + backdrop blur. 4 액션 (정보공개청구·이의제기·CSV·공유) — 현재 `console.info` placeholder.
+- `pages/ClusterDetailPage.tsx` — 7 섹션 + ActionBar + MemberDrawer.
+
+**의도적 결정**
+- **OpenStreetMap 기본 타일** — Stadia/Carto dark 매력적이지만 API 키 필요. 일단 light 타일로 시작, P14 메소돌로지 페이지 시점에 다크 톤 검토.
+- **leaflet 기본 마커 안 씀** — Vite + leaflet 의 marker icon 깨지는 알려진 문제 회피. CircleMarker 가 명세("크기 = 낙찰 횟수")에 더 적합.
+- **시계열 line = winAmount** (명세대로) — count 가 아닌 금액. aggregate 에 winAmount 추가.
+- **MemberDrawer ESC 핸들러** — `selectedMember` 가 truthy 일 때만 listener 등록 → 메모리 누수 회피.
+- **단위 테스트 미작성** — P07 컴포넌트는 차트/지도/SVG 등 시각 영역. 명세도 단위 테스트 명시 X. 시각 검증 (4 clusters HTTP 200) 으로 충족.
+
+**검증 (2026-05-10)**
+- `npm run typecheck` — 통과.
+- `npm run test` — 14 files / 30 tests passed.
+- 4 high-risk 라우트 (`BSN-2026-0001~0004`) 모두 HTTP 200.
+
+**다음 — P08 학교별 보기 + 부산 지도**
+- `/schools` 부산 지도 + 마커 (의심 클러스터 응찰 빈도 색상)
+- `/schools/:code` 학교 메타 + 단골 응찰자 TOP 10 + 안전성 지수 (1-5 단계)
+- leaflet.markercluster (50 → 600개 확장 시)

@@ -11,6 +11,7 @@ export interface MonthBucket {
   month: string                  // 'YYYY-MM'
   bids: number
   wins: number
+  winAmount: number              // 합산 낙찰액 (원)
 }
 
 export function aggregateMembers(bids: Bid[], cluster: Cluster): MemberStats[] {
@@ -48,6 +49,7 @@ export function aggregateMonthly(
       month: `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`,
       bids: 0,
       wins: 0,
+      winAmount: 0,
     })
   }
   const idx = new Map(buckets.map((b, i) => [b.month, i]))
@@ -60,7 +62,27 @@ export function aggregateMonthly(
     buckets[i].bids++
     if (bid.winnerBizNo && memberSet.has(bid.winnerBizNo)) {
       buckets[i].wins++
+      buckets[i].winAmount += bid.estimatedPrice
     }
   }
   return buckets
+}
+
+export interface SchoolWinBucket {
+  schoolCode: string
+  wins: number
+}
+
+export function aggregateSchoolWins(
+  bids: Bid[],
+  cluster: Cluster,
+): SchoolWinBucket[] {
+  const memberSet = new Set(cluster.members.map((m) => m.bizNo))
+  const map = new Map<string, number>()
+  for (const bid of bids) {
+    if (bid.winnerBizNo && memberSet.has(bid.winnerBizNo)) {
+      map.set(bid.schoolCode, (map.get(bid.schoolCode) ?? 0) + 1)
+    }
+  }
+  return [...map.entries()].map(([schoolCode, wins]) => ({ schoolCode, wins }))
 }

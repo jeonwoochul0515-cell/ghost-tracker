@@ -1,5 +1,6 @@
 /* 전역 스타일 — 폰트 import + 다크 베이스 + 필름 그레인 노이즈 */
 @import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,700;0,6..96,900;1,6..96,400;1,6..96,900&family=IBM+Plex+Mono:wght@400;500;700&family=Noto+Serif+KR:wght@300;400;500;600;700;900&display=swap');
+@import 'leaflet/dist/leaflet.css';
 
 @tailwind base;
 @tailwind components;
