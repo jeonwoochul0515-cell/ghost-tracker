@@ -320,9 +320,38 @@
 - `npm run test` — 14 files / 30 tests passed.
 - `/report` HTTP 200, `/report?cluster_id=BSN-2026-0001` HTTP 200 (이의제기 탭 자동 활성).
 
-**다음 — P11 의심도 스코어링 엔진**
-- `features/scoring/signals.ts` — 12개 신호 (SAME_ADDRESS_3PLUS 등, weight + level + evaluate)
-- `features/scoring/clusterer.ts` — Union-Find 기반 사업자 → 클러스터 그룹화
-- `features/scoring/scorer.ts` — 점수 합산 0~100 + reasons[]
-- `features/scoring/statisticalTests.ts` — 이항분포 z-score
-- 신호별 단위 테스트 (정/오 케이스 + 화이트리스트 + 점수 경계)
+---
+
+## 2026-05-10 — P11 의심도 스코어링 엔진
+
+**구현**
+- `features/scoring/types.ts` — `ClusterContext`/`SignalDef`/`SignalResult`/`ScoreResult`/`MarketStats`.
+- `features/scoring/signals.ts` — 12개 신호 evaluate 구현. 임계값은 파일 상단 상수로 분리 (튜닝 용이).
+  - SAME_ADDRESS_3PLUS(35,A) · SAME_ADDRESS_5PLUS(45,S+) · FAMILY_SURNAME(20,B) · INCEPTION_CLUSTER(15,B) · SAME_SCHOOL_CO_BID(40,S) · WIN_RATE_INFLATION(35,S) · REOPEN_AT_SAME_ADDRESS(25,A) · NEW_AND_BIG_WIN(20,A) · SINGLE_BUYER_DOMINANCE(15,B) · CATEGORY_OMNIVORE(10,C) · GEOGRAPHIC_MISMATCH(15,B) · SHORT_LIVED(20,A).
+- `features/scoring/clusterer.ts` — `UnionFind` (path compression) + 3단계 그룹화:
+  1차 정규화 주소 동일성(화이트리스트 제외) / 2차 식자재 업종 + 동일 대표자 / 3차 같은 성씨 + 같은 구·군 (식자재 한정, 3명 이상).
+- `features/scoring/scorer.ts` — `scoreCluster(ctx, signals)` 발화 weight 누적 → 0~100 클램프 → high(80+) / mid(50-79) / low(<50) + reasons[].
+- `features/scoring/statisticalTests.ts` — `chanceTest` 이항분포 z-score + Abramowitz & Stegun 정규근사 `normalCdf`.
+
+**의도적 결정**
+- **3PLUS / 5PLUS 별도 발화** — 명세 weight 합산 의도 그대로. 5명 등록 시 35+45=80 (단독으로 high 등급 진입). scorer 100 클램프가 안전장치.
+- **clusterer 3차는 같은 성씨+구·군 단순 매칭** — 정확한 "가족 추정" (연락처·주민번호 일부 매칭) 은 P12 백엔드 + P13 NTS API 후. 현 단계는 휴리스틱.
+- **임계값 상수 상단 분리** — `FAMILY_MIN_SAMENAMES`/`SAME_SCHOOL_CO_BID_MIN`/`DOMINANCE_RATIO` 등. P14 메소돌로지에서 노출하고 P15 admin 에서 튜닝 가능 구조.
+- **GEOGRAPHIC_MISMATCH 단순화** — 본점-납품지 거리 계산 (좌표 데이터 없음) 대신 구·군 라벨 비교. 시드 데이터 호환.
+- **statisticalTests 통합 안 함** — `scorer` 가 chanceTest 호출 안 함. 별도 사용 (P14 메소돌로지·P07 신호 보조). WIN_RATE_INFLATION 신호가 실용적 검증 담당.
+
+**테스트 (Vitest)**
+- `signals.test.ts` — 신호 12종 × 정/오 케이스 + 화이트리스트 회피 (SAME_ADDRESS).
+- `clusterer.test.ts` — 6 케이스 (주소 그룹화 / 화이트리스트 회피 / 식자재+대표자 / 업종 분리 / 가족 추정 / 단일).
+- `scorer.test.ts` — 7 케이스 (빈/누적/클램프/HIGH 경계/MID 경계/MID-1/null 신호).
+- `seed.test.ts` — 3 sanity check (BSN-2026-0001 high / 0002 mid+ / 0012 ≠ high).
+
+**검증 (2026-05-10)**
+- `npm run typecheck` — 통과 (unused import 1차 발견 후 정리).
+- `npm run test` — **18 files / 73 tests passed** (기존 30 → +43).
+
+**다음 — P12 Supabase 스키마 + Edge Functions**
+- `supabase/migrations/{001_init,002_indexes,003_rls}.sql`
+- `supabase/functions/{ingest-eat,ingest-nts,normalize-addresses,recompute-clusters,submit-report}/`
+- `supabase/seed.sql`
+- README 에 supabase init / db push / functions deploy 절차
