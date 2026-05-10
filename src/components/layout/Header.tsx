@@ -1,4 +1,5 @@
-// 사이트 헤더 — sticky, blur 배경, 로고 + 네비 + Live Beta 인디케이터
+// 사이트 헤더 — sticky, blur 배경, NavLink 기반 active 표시 + Live Beta 인디케이터
+import { NavLink } from 'react-router-dom'
 import { cn } from '@/lib/cn'
 
 interface NavItem {
@@ -28,21 +29,27 @@ export function Header({ navItems = defaultNav, className }: HeaderProps) {
       )}
     >
       <div className="max-w-[1400px] mx-auto flex items-center justify-between px-8 h-16">
-        <a
-          href="/"
+        <NavLink
+          to="/"
           className="font-display font-black italic text-xl tracking-tight whitespace-nowrap"
         >
           Ghost<span className="text-accent mx-0.5">·</span>Tracker
-        </a>
+        </NavLink>
         <nav className="hidden md:flex items-center gap-6 font-mono text-[10px] uppercase tracking-[0.2em]">
           {navItems.map((item) => (
-            <a
+            <NavLink
               key={item.href}
-              href={item.href}
-              className="text-ink-dim hover:text-ink transition-colors"
+              to={item.href}
+              end={item.href === '/'}
+              className={({ isActive }) =>
+                cn(
+                  'transition-colors',
+                  isActive ? 'text-accent' : 'text-ink-dim hover:text-ink',
+                )
+              }
             >
               {item.label}
-            </a>
+            </NavLink>
           ))}
         </nav>
         <span className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-dim">

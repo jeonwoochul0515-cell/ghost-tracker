@@ -93,8 +93,33 @@
 - `npm run test` — 13 files / 14 tests passed (3.45s).
 - `npm run dev` — HTTP 200, HMR 정상 (page reload 후 hmr update 로그 확인).
 
-**다음 — P03 라우팅 + 페이지 골격**
-- React Router v6 + 10개 라우트 (`/`, `/clusters`, `/clusters/:id`, `/schools`, `/schools/:code`, `/cases`, `/cases/:id`, `/report`, `/methodology`, `/api`)
-- `src/pages/*.tsx` 각각 PageShell + h1 만 (임시)
-- Zustand 스토어 2개 (uiStore, filterStore)
-- Header 의 anchor → React Router Link 로 교체
+---
+
+## 2026-05-10 — P03 라우팅 + 페이지 골격
+
+**구현**
+- 페이지 10개 (`src/pages/*.tsx`) — 모두 `PageShell + DisplayHeading h1` placeholder. 상세 3개(`ClusterDetail`/`SchoolDetail`/`CaseDetail`)는 `useParams` 로 ID/code 표시.
+- `App.tsx` — `BrowserRouter` + `Routes` (10건) + Header/Footer 공통 레이아웃.
+- `Header.tsx` — `<a>` 를 `NavLink` 로 교체. `isActive ? 'text-accent' : 'text-ink-dim'` 로 active 표시. 루트 `/` 는 `end` 옵션으로 정확 매치만.
+- `Header.test.tsx` — `<MemoryRouter>` wrap + active 표시 테스트 1건 추가.
+- 스토어 2개:
+  - `useUiStore` — sidebarOpen / theme(다크 고정) / toggleSidebar
+  - `useFilterStore` — riskLevel(`all|high|mid|low`) / district / signals[] / toggleSignal / reset
+
+**의도적 미구현 (CLAUDE.md #2)**
+- **catch-all `*` 라우트 안 만듦** — P03 명세에 없음. 잘못된 경로는 React Router 가 빈 페이지 렌더(HTTP 200, Header/Footer 만 보임). 검증 항목 "새로고침 시 404 안 나는지" 는 Vite SPA fallback 으로 모든 경로가 index.html → 200 반환 → 충족.
+- **페이지 테스트 안 만듦** — P03 검증은 라우트 동작이며 페이지 자체는 placeholder. 실제 콘텐츠 들어오는 P06+ 단계에서 추가.
+
+**파일 정리**
+- `src/pages/.gitkeep`, `src/stores/.gitkeep` 삭제.
+
+**검증 (2026-05-10)**
+- `npm run typecheck` — 통과.
+- `npm run test` — 13 files / **15 tests** passed (Header active 표시 1건 추가).
+- 11개 경로 curl — 모두 HTTP 200 (Vite SPA fallback).
+
+**다음 — P04 도메인 타입 + Supabase 클라이언트**
+- `src/types/domain.ts` — Business/Cluster/Bid/CourtCase/Report 등 5개 인터페이스
+- `src/lib/supabase.ts` — createClient + 환경변수 검증 + 타입 안전 헬퍼
+- `src/lib/masking.ts` — maskBizNo / maskRepName / maskAddress + 각 5개 단위 테스트
+- `src/lib/format.ts` — formatKRW / formatPercent / formatRatio
