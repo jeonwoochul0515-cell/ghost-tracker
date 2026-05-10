@@ -61,8 +61,40 @@
 - `npm run typecheck` — 통과.
 - `npm run test` — vitest 실행 가능 (테스트 파일 부재로 exit 1, 정상).
 
-**다음 — P02 디자인 시스템**
-- 폰트 import (Bodoni Moda · Noto Serif KR · IBM Plex Mono)
-- `src/styles/globals.css` (필름 그레인 노이즈 등)
-- 원시 UI 컴포넌트 7개 + 타이포 3개 + 레이아웃 3개
-- 각 컴포넌트 Vitest 렌더 테스트 1개씩
+---
+
+## 2026-05-10 — P02 디자인 시스템
+
+**구현**
+- `src/styles/globals.css` — Google Fonts (Bodoni Moda · Noto Serif KR · IBM Plex Mono) + body 다크 베이스 + `body::before` 필름 그레인(SVG fractalNoise + `mix-blend-mode: overlay`) + `::selection` + `:focus-visible`.
+- `src/lib/cn.ts` — `clsx` + `tailwind-merge` 병합 유틸.
+- UI 7개: Button(primary/ghost/danger × sm/md/lg) · Badge(high/mid/low/neutral) · Card · Input · Tabs · Dialog · Tooltip.
+- Typography 3개: DisplayHeading(h1/h2/h3, italic 옵션) · SectionTitle · StatNumber.
+- Layout 3개: Header(sticky+blur+Live Beta) · Footer(3분할: Operator/Sources/Disclaimer) · PageShell(max-w 1400px + 사이드바 옵션).
+- 13개 컴포넌트 × Vitest 렌더 테스트 (14건 통과).
+
+**API 결정**
+- **React 19 ref-as-prop 채택** — `forwardRef` 대신 `interface XProps { ref?: Ref<…> }` 사용. shadcn 의 forwardRef 패턴은 React 19 부터 불필요. Button/Input 에 적용. 코드 단순화.
+- **Dialog: native `<dialog>` 채택** — Radix 등 의존성 추가 없이 `showModal()/close()` 와 `::backdrop` CSS. jsdom 25.x 가 HTMLDialogElement 지원하므로 테스트 가능.
+- **Tabs: Context API + controlled/uncontrolled 양쪽 지원** — `value` prop 안 주면 internal state, 주면 외부 제어.
+- **Tooltip: hover/focus 단순 구현** — Floating UI 등 미도입. 부산 시민 모니터링용 정확한 포지셔닝 불필요.
+- **컬러 토큰**: Tailwind config 의 `bg/bg-2/bg-3 · ink/ink-dim/ink-faint · line · accent · danger/warning/safe` 사용. `globals.css` 에 CSS 변수 중복 등록은 피함 (단일 진실 원천 = tailwind.config.ts).
+
+**App.tsx**
+- 디자인 시스템 시각 검증 페이지로 교체. Hero(SectionTitle + DisplayHeading) + 4분할 stats + 4 Card 데모(Badge/Button/Input/Disclaimer 각각).
+- P03 에서 React Router 도입과 함께 갈아엎을 예정.
+
+**파일 정리**
+- `src/index.css` 삭제 — `src/styles/globals.css` 로 이전.
+- `src/styles/.gitkeep` 삭제 — globals.css 가 디렉토리 채움.
+
+**검증**
+- `npm run typecheck` — 통과.
+- `npm run test` — 13 files / 14 tests passed (3.45s).
+- `npm run dev` — HTTP 200, HMR 정상 (page reload 후 hmr update 로그 확인).
+
+**다음 — P03 라우팅 + 페이지 골격**
+- React Router v6 + 10개 라우트 (`/`, `/clusters`, `/clusters/:id`, `/schools`, `/schools/:code`, `/cases`, `/cases/:id`, `/report`, `/methodology`, `/api`)
+- `src/pages/*.tsx` 각각 PageShell + h1 만 (임시)
+- Zustand 스토어 2개 (uiStore, filterStore)
+- Header 의 anchor → React Router Link 로 교체
