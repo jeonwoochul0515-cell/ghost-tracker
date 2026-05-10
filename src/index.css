@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* P02 에서 globals.css 로 디자인 시스템 도입 예정. 현재는 빌드 검증용 최소 스타일. */
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100svh;
+  background-color: #0a0a0a;
+  color: #f5f1e8;
+  font-family: 'Noto Serif KR', system-ui, serif;
+}

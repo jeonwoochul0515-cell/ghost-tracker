@@ -44,8 +44,7 @@ supabase/.branches/
 .vercel
 
 # Claude Code (개인 로컬 설정)
-.claude/settings.local.json
-.claude/memory/
+.claude/
 
 # Build artifacts
 *.tsbuildinfo

@@ -33,7 +33,36 @@
 
 ---
 
-## 다음 단계
+---
 
-**P01 — Vite 스캐폴드** 대기 중.
-사용자 승인 후 진행.
+## 2026-05-10 — P01 Vite 스캐폴드
+
+**Vite 초기화 전략**
+- 작업 디렉토리에 이미 파일이 있어 `npm create vite@latest .` 가 깔끔히 안 됨.
+- 임시 폴더(`/tmp/vite-scaffold/app`)에서 scaffold 후 필요한 파일만 복사하는 방식 채택.
+- 우리 `.gitignore`, `README.md` 는 보존.
+
+**버전 결정**
+- **React 19 유지** (P00 명세는 React 18). 이유: Vite 8 기본 템플릿이 React 19 + 2026.05 시점 에코시스템이 19 안착. `react-leaflet@5.0.0` stable 이 React 19 peer 지원해서 다운그레이드 불필요. 18 다운그레이드는 testing-library/eslint-plugin-react-hooks 까지 연쇄 수정해야 해서 비용이 더 큼.
+- **TailwindCSS v3** (사용자 동의). v4는 PostCSS 플러그인 분리·CSS-first 구성 등 큰 변경. P01 프롬프트가 `tailwind.config.ts` 형태를 가정 → v3 안정판이 자연스러움.
+- **vitest v4** 로 업그레이드. 처음엔 v2.1 로 잡았으나 v2.1 이 vite@5 를 nested dep으로 끌고 와 우리 vite@8 과 ProxyOptions 타입 충돌. v4 는 vite@8 호환.
+
+**TypeScript config 미세조정**
+- `tsconfig.app.json` 에 `paths` 만 추가, `baseUrl` 은 생략. TS 5.4+ 부터 baseUrl 없이 paths 가 tsconfig 위치 기준으로 해석됨. TS 6.0 부터 baseUrl deprecated.
+- `vite.config.ts` 는 `vitest/config` 의 `defineConfig` 를 import (vite 의 것이 아닌). Vitest test 옵션 타입 인식용.
+
+**Vite 데모 자산 정리**
+- `App.tsx` 를 placeholder 로 교체하면서 끊긴 import 를 따라 `App.css`, `src/assets/`, `public/icons.svg` 삭제 (CLAUDE.md #3: 내 변경이 만든 orphan 정리).
+- `index.html` 의 `lang="en" → "ko"`, 타이틀·meta description 추가.
+
+**검증 결과 (2026-05-10)**
+- `npm install` — 0 vulnerabilities, 377 packages.
+- `npm run dev` — HTTP 200, lang="ko", 타이틀 한국어 정상.
+- `npm run typecheck` — 통과.
+- `npm run test` — vitest 실행 가능 (테스트 파일 부재로 exit 1, 정상).
+
+**다음 — P02 디자인 시스템**
+- 폰트 import (Bodoni Moda · Noto Serif KR · IBM Plex Mono)
+- `src/styles/globals.css` (필름 그레인 노이즈 등)
+- 원시 UI 컴포넌트 7개 + 타이포 3개 + 레이아웃 3개
+- 각 컴포넌트 Vitest 렌더 테스트 1개씩
