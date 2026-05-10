@@ -5,7 +5,8 @@ function hasSignalKeyword(cluster: Cluster, keyword: string): boolean {
   return cluster.signals.some((s) => s.text.includes(keyword))
 }
 
-function scoreCase(cluster: Cluster, c: CourtCase): number {
+/** 판례 ↔ 클러스터 패턴 점수. 양방향 매칭에서 동일 함수 사용. */
+export function scoreCaseAgainstCluster(c: CourtCase, cluster: Cluster): number {
   let score = 0
   if (c.pattern.sharedAddress && hasSignalKeyword(cluster, '동일주소')) score += 3
   if (
@@ -35,7 +36,7 @@ export function matchCases(
   topN = 3,
 ): { case: CourtCase; score: number }[] {
   return cases
-    .map((c) => ({ case: c, score: scoreCase(cluster, c) }))
+    .map((c) => ({ case: c, score: scoreCaseAgainstCluster(c, cluster) }))
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, topN)

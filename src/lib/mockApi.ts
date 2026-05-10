@@ -76,6 +76,9 @@ export async function listBids(
   return result
 }
 
+// TODO: 사법정보공유포털(portal.scourt.go.kr) API 인가 후 실제 판례로 교체.
+// 현 시드 데이터는 모두 (가상) 표기된 가짜 사건이며, 실제 판례는
+// P13 의 src/server/adapters/courtApi.ts 어댑터를 통해 연결될 예정.
 export async function listCourtCases(): Promise<CourtCase[]> {
   await delay()
   return [...casesSeed].sort((a, b) => (a.date < b.date ? 1 : -1))

@@ -266,7 +266,35 @@
 - `npm run test` — 14 files / 30 tests passed.
 - `/schools`, `/schools/PSN-001`, `/schools/PSN-006`, `/schools/PSN-016` 모두 HTTP 200.
 
-**다음 — P09 판례 라이브러리**
-- `/cases` 죄명/결과/패턴/연도 필터 + 카드 그리드
-- `/cases/:id` 사실관계 구조화 + 증거 + 매칭 클러스터 추천 (matching.ts 역방향)
-- features/cases/* 컴포넌트 분리
+---
+
+## 2026-05-10 — P09 판례 라이브러리
+
+**구현**
+- `features/clusters/matching.ts` — `scoreCaseAgainstCluster(c, cluster)` 로 함수명 export 화 (cluster→case / case→cluster 양방향에서 재사용).
+- `features/cases/matchClusters.ts` — `matchClustersForCase(c, clusters, topN)` 역방향 매칭. 동일 score 함수 재사용.
+- `features/cases/classify.ts` — `inferCharges` / `inferPatterns` / `inferYear` / `patternBadgeText`. 시드 cases.ts 의 summary·pattern 에서 키워드 기반 추론.
+  - 죄명 5종: 입찰방해 · 사기 · 담합 · 국가계약법 · 복합 (2개 이상 매칭 시).
+  - 패턴 4종: 가족명의 · 동일주소 · 폐업회전 · 차명.
+- `features/cases/CaseFilters.tsx` — 죄명(체크박스 OR) · 결과(라디오 4개) · 패턴(체크박스 OR) · 연도(칩 다중 선택).
+- `features/cases/CaseCard.tsx` — ID/법원/결과 + 1줄 요약 + 패턴 태그 + 형량 + 외부 링크 옵션.
+- `features/cases/MatchedClustersForCase.tsx` — 매칭 클러스터 top 3 카드 (위험도 배지 + 분신 배수 + 유사도 점수).
+- `pages/CasesPage.tsx` — PageShell sidebar + 카드 그리드 (md:grid-cols-2).
+- `pages/CaseDetailPage.tsx` — 메타 + 사실관계(2-col grid) + 증거 리스트 + 형량 + 매칭 클러스터 + 외부 링크 + 면책.
+- `lib/mockApi.ts` — `listCourtCases`/`getCourtCase` 위에 사법정보공유포털 향후 연결 TODO 주석 명시 (P13 어댑터 예정).
+
+**의도적 결정**
+- **죄명/패턴은 시드 변경 없이 keyword inference** — `CourtCase` 도메인 타입에 `charges`/`patterns` 필드 추가 안 함 (CLAUDE.md #3 surgical changes). summary·pattern.method·relationship 에서 추론. 폴백: charges 가 비면 '입찰방해' 가정.
+- **연도 필터 = 칩 다중 선택** — native dual-range slider 는 native HTML 미지원이고, 시드 데이터가 8건이라 연도 풀이 적음(2022~2025). 칩 OR 합집합이 자연스럽고 다크 톤에도 맞음.
+- **CaseDetailPage 가 useCourtCase 훅 안 거치고 api.getCourtCase 직접** — useCase 훅 추가는 P05 명세 외이고 P09 가 명시 안 함. 이번 한 페이지에서만 inline. 추후 useCase 분리 검토.
+- **한글 ID URL 인코딩** — `encodeURIComponent(c.id)` (`CaseCard`, `MatchedCases`, `MatchedClustersForCase` 모두). React Router 의 `useParams` 가 자동 디코딩. raw 한글 path 도 SPA fallback 에서 200 (브라우저는 자동 인코딩).
+
+**검증 (2026-05-10)**
+- `npm run typecheck` — 통과 (unused imports 1차 발견 후 정리).
+- `npm run test` — 14 files / 30 tests passed.
+- `/cases` HTTP 200, 8건 정상 표시. 한글 ID 3건 (`2023고단1234 (가상)` 등) URL 인코딩 후 모두 HTTP 200.
+
+**다음 — P10 제보·이의제기 + 정보공개청구**
+- `/report` 탭 (제보 / 이의제기) + React Hook Form + Zod 검증
+- 정보공개청구 양식 생성기 (cluster 상세에서 다이얼로그 → .docx 다운로드)
+- mockApi 에 submitReport 추가
