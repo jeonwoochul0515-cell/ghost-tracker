@@ -34,12 +34,8 @@ export function useAuth(): AuthState {
       setLoading(false)
       return
     }
-    // 실제 Supabase 모드는 P12 supabase 클라이언트 통해 처리.
-    import('@/lib/supabase').then((mod) => {
-      if (cancelled) return
-      void mod
-      setLoading(false)
-    })
+    // 실제 Supabase 모드: 세션 복원은 후속 작업 (P15 admin 본격 구현 시점에 supabase.auth.getSession 연결).
+    setLoading(false)
     return () => {
       cancelled = true
     }
