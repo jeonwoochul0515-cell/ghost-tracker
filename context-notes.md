@@ -178,9 +178,41 @@
 - `npm run dev` — HTTP 200, HMR 반영, react-router-dom 의존성 자동 최적화.
 - 브라우저 콘솔 (사용자 검증) — `[Ghost Tracker] mode=mock · clusters=12` 출력 예상.
 
-**다음 — P06 메인 대시보드**
-- Hero (DisplayHeading + 부제 + 본문)
-- Stats Strip 4분할 (실수치)
-- 좌측 sticky 사이드바 (검색 + 위험도/지역/신호 필터, filterStore 연동)
-- 우측 ClusterCard 리스트 (5개씩 페이지네이션, expanded 상태 관리)
-- TimelineBars (24개 막대) + NetworkGraph (SVG 원형 배치) 컴포넌트
+---
+
+## 2026-05-10 — P06 메인 대시보드
+
+**구현**
+- `DashboardPage` — 4영역 구조: Hero(border-b) + StatsStrip(border-y) + PageShell(sidebar+main) + 면책.
+- `features/clusters/aggregate.ts` — 멤버별 wins/bids 집계 + 24개월 monthly 버킷. ClusterCard 의 timeline/network 계산용.
+- `features/clusters/TimelineBars.tsx` — 24개 flex 막대, win=accent / 응찰=ink-faint(투명 0.6), Tooltip hover.
+- `features/clusters/NetworkGraph.tsx` — SVG 원형 5명 배치, 중앙 accent dot + 외곽 ink dot, 점선 연결, 노드별 이름·wins/bids·개업월.
+- `features/clusters/ClusterCard.tsx` — 클릭 토글(`useUiStore.toggleExpandedCluster`) collapsed↔expanded. expanded: 멤버 테이블 + NetworkGraph + TimelineBars + 액션 버튼 4개. `useNavigate` 로 `/clusters/:id` 이동.
+- `features/clusters/ClusterFilters.tsx` — 검색 / 의심도(전부·고위험·중간·관찰 + 카운트) / 지역(부산 구·군) / 신호(5개 substring 매칭) / 도구(정보공개청구/내려받기/방법론).
+- `features/clusters/StatsStrip.tsx` — 4분할 + `stagger-fade-up` 애니메이션 (CSS `@keyframes` + `--i` 변수로 80ms stagger).
+- `globals.css` — `@keyframes fade-up` + `.stagger-fade-up` 클래스.
+
+**의도적 결정**
+- **`useBids` 추가** (P05 4개 hook 외) — ClusterCard 의 timeline/network 계산에 필수. P06 단계에서 필요해 추가.
+- **검색은 클라이언트 측** — `useClusters(filters)` 가 fetch 한 결과를 useMemo 로 추가 필터. listClusters 의 search 인자가 없어 직관적.
+- **신호 필터 substring(OR)** — sidebar id ('동일주소' 등)가 cluster.signals.text 에 substring 매칭. mockApi 도 같은 로직으로 변경. AND 가 아닌 OR — 사용자가 다중 선택 시 합집합.
+- **filtersKey 패턴** — `JSON.stringify({riskLevel,district,signals})` 로 stable dep. zustand selector 가 매번 새 ref 가능성을 회피.
+- **expanded 상태는 uiStore** (배열). 페이지 떠나도 유지. multi-expand 자연스러움.
+- **Hero 인라인** — 별도 `HeroSection` 컴포넌트 안 만듦 (재사용 의도 없음, CLAUDE.md #2 단순성).
+
+**filtersKey effect 리셋**
+- `useEffect(() => setPage(1), [filtersKey, search])` — 필터/검색 변경 시 1페이지로 자동 리셋.
+
+**검증 (2026-05-10)**
+- `npm run typecheck` — 통과.
+- `npm run test` — 14 files / 30 tests passed (P06 컴포넌트는 시각/통합 영역이라 단위 테스트 미작성 — 명세도 ClusterCard 테스트 명시 X).
+- `npm run dev` — HTTP 200, HMR 자동 반영, @supabase/supabase-js 의존성 자동 최적화.
+
+**다음 — P07 클러스터 상세 페이지**
+- 상단 패널 (클러스터 ID/기간/위치/위험도 + 의심도 게이지)
+- 신호 패널 4분할
+- 구성 사업자 테이블 + 행 클릭 디테일 슬라이드
+- Recharts ComposedChart (월별 응찰/낙찰)
+- react-leaflet 학교 분포 지도
+- 매칭 판례 섹션 (P09 의 cases 와 연동)
+- sticky 액션 바

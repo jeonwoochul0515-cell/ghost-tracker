@@ -35,9 +35,11 @@ export async function listClusters(
     result = result.filter((c) => c.district === filters.district)
   }
   if (filters.signals && filters.signals.length > 0) {
-    const wanted = new Set(filters.signals)
+    // signals 필터는 substring(OR) — 사용자가 "동일주소" 체크 시 "동일주소 5인 등록" 등 매칭.
     result = result.filter((c) =>
-      c.signals.some((s) => wanted.has(s.text)),
+      filters.signals!.some((needle) =>
+        c.signals.some((s) => s.text.includes(needle)),
+      ),
     )
   }
 

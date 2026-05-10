@@ -6,13 +6,22 @@ type Theme = 'dark'
 interface UiState {
   sidebarOpen: boolean
   theme: Theme
+  expandedClusterIds: string[]
   setSidebarOpen: (open: boolean) => void
   toggleSidebar: () => void
+  toggleExpandedCluster: (id: string) => void
 }
 
 export const useUiStore = create<UiState>((set) => ({
   sidebarOpen: true,
   theme: 'dark',
+  expandedClusterIds: [],
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
+  toggleExpandedCluster: (id) =>
+    set((s) => ({
+      expandedClusterIds: s.expandedClusterIds.includes(id)
+        ? s.expandedClusterIds.filter((x) => x !== id)
+        : [...s.expandedClusterIds, id],
+    })),
 }))
