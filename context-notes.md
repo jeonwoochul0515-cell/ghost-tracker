@@ -294,7 +294,35 @@
 - `npm run test` — 14 files / 30 tests passed.
 - `/cases` HTTP 200, 8건 정상 표시. 한글 ID 3건 (`2023고단1234 (가상)` 등) URL 인코딩 후 모두 HTTP 200.
 
-**다음 — P10 제보·이의제기 + 정보공개청구**
-- `/report` 탭 (제보 / 이의제기) + React Hook Form + Zod 검증
-- 정보공개청구 양식 생성기 (cluster 상세에서 다이얼로그 → .docx 다운로드)
-- mockApi 에 submitReport 추가
+---
+
+## 2026-05-10 — P10 제보·이의제기 + 정보공개청구
+
+**구현**
+- `lib/mockApi.ts` + `lib/supabase.ts` — `submitReport(payload)` (`SubmitReportPayload` 인터페이스). mockApi 는 `REPORT-2026-XXXX` 랜덤 ID 반환 + console.info 로깅.
+- `features/reports/TipForm.tsx` — RHF + Zod. 5종 유형(분신술/담합/리베이트/위생/기타), 의심 사업자/학교 (선택), 내용(필수, 10자+), 연락처(선택, 이메일 검증), 동의 체크박스(필수).
+- `features/reports/ObjectionForm.tsx` — 대상 클러스터 ID(필수) / 사유 라디오(오매칭/사실관계 오류/추가 정보) / 상세 사유(필수, 10자+) / 신원(선택) / 연락처(선택). 상단에 24h SLA 안내 박스(warning 톤).
+- `features/reports/ReceiptScreen.tsx` — 접수번호 표시(`select-all` 로 더블클릭 복사 용이) + "새로 작성" 액션.
+- `features/clusters/foiaForm.ts` — `buildFoiaFormData` (청구기관/범위/항목/법적근거 등) + `renderFoiaHtml` + `downloadFoiaDoc` (Blob `application/msword` + `.doc` 확장자 + UTF-8 BOM).
+- `features/clusters/FoiaDialog.tsx` — `<Dialog>` 안에 미리보기 + .doc 다운로드 + open.go.kr 외부 링크.
+- `features/clusters/ActionBar.tsx` — clusterId prop 제거하고 4개 핸들러 props 화 (onFoia/onObjection/onCsv/onShare).
+- `pages/ReportPage.tsx` — Tabs 2개 + `useSearchParams` 로 `?cluster_id=` 자동 진입.
+- `pages/ClusterDetailPage.tsx` — `foiaOpen` state + `useNavigate` + ActionBar 핸들러 연결 (FOIA → 다이얼로그 / 이의제기 → `/report?cluster_id=`).
+
+**의도적 결정**
+- **`docx` 패키지 미설치 — HTML+`application/msword`** — P10 명세는 ".docx 다운로드" 명시했으나 실제 사용자 경험은 Word·한글·Google Docs 가 열 수 있는지가 핵심. HTML 문자열 + `application/msword` MIME + `.doc` 확장자로 의존성 추가 없이 충족. UTF-8 BOM(`﻿`) 으로 한글 깨짐 회피. 향후 진짜 OOXML 필요 시 `docx` 패키지로 마이그레이션 가능.
+- **파일 첨부(Supabase Storage) 미구현** — P10 폼에 명시되어 있으나 Storage 연결은 P12 백엔드 인프라 단계 후. 현재 폼에 `<input type="file">` 안 둠 — 안 되는 기능을 노출하지 않음(CLAUDE.md #2).
+- **`useReportSubmit` hook 미작성** — 두 폼에서만 호출, 각자 `api.submitReport` 직접. 추상화 가치 적음.
+- **CSV/공유 액션은 console.info placeholder** — CSV는 P12 후 실데이터 정리 시점, 공유 링크는 `navigator.clipboard?.writeText(window.location.href)` (지원 브라우저에서 즉시 동작).
+
+**검증 (2026-05-10)**
+- `npm run typecheck` — 통과 (mockApi.submitReport `payload` unused 1차 발견 후 console.info 로 활용).
+- `npm run test` — 14 files / 30 tests passed.
+- `/report` HTTP 200, `/report?cluster_id=BSN-2026-0001` HTTP 200 (이의제기 탭 자동 활성).
+
+**다음 — P11 의심도 스코어링 엔진**
+- `features/scoring/signals.ts` — 12개 신호 (SAME_ADDRESS_3PLUS 등, weight + level + evaluate)
+- `features/scoring/clusterer.ts` — Union-Find 기반 사업자 → 클러스터 그룹화
+- `features/scoring/scorer.ts` — 점수 합산 0~100 + reasons[]
+- `features/scoring/statisticalTests.ts` — 이항분포 z-score
+- 신호별 단위 테스트 (정/오 케이스 + 화이트리스트 + 점수 경계)

@@ -5,6 +5,7 @@ import type {
   Business,
   Cluster,
   CourtCase,
+  Report,
   School,
 } from '@/types/domain'
 import { businessesSeed, clustersSeed } from './seed/clusters'
@@ -108,4 +109,24 @@ export async function listSchools(
 export async function getSchool(code: string): Promise<School | null> {
   await delay()
   return schoolsSeed.find((s) => s.code === code) ?? null
+}
+
+export interface SubmitReportPayload {
+  type: Report['type']
+  targetClusterId?: string
+  targetBizNo?: string
+  content: string
+  contactEmail?: string
+}
+
+export async function submitReport(
+  payload: SubmitReportPayload,
+): Promise<{ id: string; status: 'received' }> {
+  await delay()
+  console.info('[mockApi] submitReport', payload)
+  const seq = Math.floor(1000 + Math.random() * 9000)
+  return {
+    id: `REPORT-2026-${seq}`,
+    status: 'received',
+  }
 }

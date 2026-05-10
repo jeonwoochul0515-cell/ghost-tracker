@@ -1,6 +1,6 @@
 // 클러스터 상세 — 상단 패널 + 신호 4분할 + 멤버 테이블(drawer) + 시계열 + 지도 + 판례 + 액션바
 import { useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useCluster } from '@/hooks/useCluster'
 import { useBids } from '@/hooks/useBids'
 import { useSchools } from '@/hooks/useSchools'
@@ -16,6 +16,7 @@ import { SchoolMap } from '@/features/clusters/SchoolMap'
 import { MatchedCases } from '@/features/clusters/MatchedCases'
 import { ActionBar } from '@/features/clusters/ActionBar'
 import { MemberDrawer } from '@/features/clusters/MemberDrawer'
+import { FoiaDialog } from '@/features/clusters/FoiaDialog'
 import {
   aggregateMembers,
   aggregateMonthly,
@@ -38,12 +39,14 @@ const STATUS_LABEL: Record<'active' | 'closed' | 'reopened', string> = {
 
 export function ClusterDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const { data: cluster, loading, error } = useCluster(id)
   const { data: bids } = useBids()
   const { data: schools } = useSchools()
   const { data: cases } = useCases()
 
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null)
+  const [foiaOpen, setFoiaOpen] = useState(false)
 
   const memberStats = useMemo(() => {
     if (!cluster || !bids) return []
@@ -274,13 +277,30 @@ export function ClusterDetailPage() {
       </PageShell>
 
       {/* ─── 8. Sticky Action Bar ─── */}
-      <ActionBar clusterId={cluster.id} />
+      <ActionBar
+        onFoia={() => setFoiaOpen(true)}
+        onObjection={() =>
+          navigate(`/report?cluster_id=${encodeURIComponent(cluster.id)}`)
+        }
+        onCsv={() => console.info(`[${cluster.id}] CSV 다운로드 (P12 후 구현)`)}
+        onShare={() => {
+          void navigator.clipboard?.writeText(window.location.href)
+          console.info(`[${cluster.id}] 공유 링크 복사됨`)
+        }}
+      />
 
       {/* ─── 9. Member Drawer ─── */}
       <MemberDrawer
         member={selectedMember}
         stats={selectedStats}
         onClose={() => setSelectedMemberId(null)}
+      />
+
+      {/* ─── 10. FOIA Dialog ─── */}
+      <FoiaDialog
+        cluster={cluster}
+        open={foiaOpen}
+        onClose={() => setFoiaOpen(false)}
       />
     </>
   )

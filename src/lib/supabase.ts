@@ -11,6 +11,7 @@ import type {
   Business,
   Cluster,
   CourtCase,
+  Report,
   School,
 } from '@/types/domain'
 import type { RiskFilter } from '@/stores/filterStore'
@@ -164,4 +165,32 @@ export async function getSchool(code: string): Promise<School | null> {
     .maybeSingle()
   if (error) throw error
   return (data as unknown as School) ?? null
+}
+
+export interface SubmitReportPayload {
+  type: Report['type']
+  targetClusterId?: string
+  targetBizNo?: string
+  content: string
+  contactEmail?: string
+}
+
+export async function submitReport(
+  payload: SubmitReportPayload,
+): Promise<{ id: string; status: 'received' }> {
+  const c = ensureClient()
+  const { data, error } = await c
+    .from('reports')
+    .insert({
+      type: payload.type,
+      target_cluster_id: payload.targetClusterId ?? null,
+      target_bizno: payload.targetBizNo ?? null,
+      content: payload.content,
+      contact_email: payload.contactEmail ?? null,
+      status: 'received',
+    })
+    .select('id, status')
+    .single()
+  if (error) throw error
+  return data as { id: string; status: 'received' }
 }
