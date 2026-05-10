@@ -350,8 +350,39 @@
 - `npm run typecheck` — 통과 (unused import 1차 발견 후 정리).
 - `npm run test` — **18 files / 73 tests passed** (기존 30 → +43).
 
-**다음 — P12 Supabase 스키마 + Edge Functions**
-- `supabase/migrations/{001_init,002_indexes,003_rls}.sql`
-- `supabase/functions/{ingest-eat,ingest-nts,normalize-addresses,recompute-clusters,submit-report}/`
-- `supabase/seed.sql`
-- README 에 supabase init / db push / functions deploy 절차
+---
+
+## 2026-05-10 — P12 Supabase 스키마 + Edge Functions
+
+**구현**
+- `supabase/config.toml` — minimal 프로젝트 설정 (api/db/studio/storage/auth/edge_runtime).
+- `supabase/migrations/001_init.sql` — 8 테이블 (businesses · bids · schools · clusters · cluster_members · court_cases · reports · whitelist_addresses) + REPORT-YYYY-XXXX sequence.
+- `supabase/migrations/002_indexes.sql` — 11 인덱스 (address_normalized · rep_name · school+date · winner · GIN participants · cluster_members(bizno) · clusters(risk) 등).
+- `supabase/migrations/003_rls.sql` — RLS 정책 + `businesses_public` 마스킹 view (사업자번호 `XXX-XX-XXXXX`, 한 글자 성씨 한국 이름은 `O+OO`). reports 는 anon INSERT 허용 + admin SELECT/UPDATE.
+- `supabase/seed.sql` — 압축 시연 데이터 (4 cluster 멤버 7명 + 6 schools + 2 cases + 1 report + 1 whitelist).
+- `supabase/functions/_shared/` — `log.ts` (structured JSON line) · `response.ts` (CORS+JSON) · `supabase.ts` (service role client).
+- 5 Edge Functions:
+  - `submit-report/` — POST + 검증 + INSERT (실 동작).
+  - `ingest-eat/` — placeholder, P13 어댑터 후 실 적재.
+  - `ingest-nts/` — placeholder.
+  - `normalize-addresses/` — placeholder.
+  - `recompute-clusters/` — placeholder, features/scoring 코드 Deno 호환 포팅 예정.
+- `README.md` — `supabase start` / `db reset` / `functions serve` / 배포 절차 추가.
+
+**의도적 결정**
+- **마스킹 view 우선** — 공개 read 는 `businesses_public` view 만 노출. raw `businesses` 는 admin 만 (RLS). 한 글자 성씨/이름은 SQL 정규식으로 처리, 복성·영문은 어플리케이션단(maskRepName) 보강.
+- **REPORT ID 자동 생성 = sequence + LPAD** — 트리거 없이 column DEFAULT. 단순. 충돌 없음.
+- **Edge Functions placeholder + structured log** — P13 어댑터 도착 전까지 호출은 200 + `status: 'placeholder'` 반환. log 는 단일 라인 JSON (`level/message/timestamp/...`) 으로 Sentry/Datadog 친화.
+- **`recompute-clusters` 가 features/scoring/* 직접 import 안 함** — Deno 런타임 vs Vite alias 호환 문제. 추후 `_shared/scoring/` 으로 mirror 또는 esm.sh 게시. 현재 구조만.
+- **시드 SQL 압축** — 시드 권위 데이터는 `src/lib/seed/*` (TypeScript). seed.sql 은 시연용 발췌. 향후 자동 변환 스크립트로 동기화.
+
+**검증 한계**
+- Supabase CLI 와 Deno 가 현재 환경에 미설치 → SQL 마이그레이션 적용 / Edge Functions 컴파일 / `supabase start` 로컬 기동 검증은 **사용자 측에서 별도 수행**.
+- 프론트 `npm run typecheck` 통과 + 73 tests 통과 (P12 변경은 supabase/* 디렉토리만이라 Vite typecheck 영향 없음).
+- 사용자 시나리오: `supabase start` → `supabase db reset` (마이그레이션+시드 자동 적용) → `supabase functions serve --no-verify-jwt` → `.env` 갱신 후 `npm run dev` 로 mock=false 모드 검증.
+
+**다음 — P13 공공데이터 API 어댑터**
+- `src/server/adapters/eatApi.ts` (eaT) · `ntsApi.ts` (국세청) · `roadAddressApi.ts` (도로명주소) · `courtApi.ts` (placeholder)
+- 각 어댑터 단위 테스트 (정상/에러/빈 결과 모킹)
+- 환경변수 검증 모듈
+- Edge Functions(placeholder) 와 결합 시 실 적재 가능

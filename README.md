@@ -51,6 +51,46 @@ npm run build        # 프로덕션 빌드
 
 `.env` 의 `VITE_USE_MOCK=true` 로 두면 Supabase 연결 없이 시드 데이터로 동작합니다.
 
+## Supabase 로컬 개발
+
+요구사항: [Supabase CLI](https://supabase.com/docs/guides/cli) + Docker.
+
+```bash
+# 1. 로컬 Supabase 기동 (Postgres + Auth + Storage + Edge Runtime)
+supabase start
+
+# 2. 마이그레이션 적용 (supabase/migrations/{001_init,002_indexes,003_rls}.sql)
+supabase db reset      # 또는: supabase db push
+
+# 3. 시드 적재 (supabase/seed.sql)
+#   db reset 시 자동 적용. 별도 실행:
+psql "$(supabase status -o env | grep DB_URL | cut -d= -f2- | tr -d '"')" -f supabase/seed.sql
+
+# 4. Edge Functions 로컬 서빙
+supabase functions serve --no-verify-jwt
+
+# 5. 프론트 .env 갱신
+#   supabase status 출력에서 API URL / anon key 복사
+#   VITE_SUPABASE_URL=http://localhost:54321
+#   VITE_SUPABASE_ANON_KEY=<anon key>
+#   VITE_USE_MOCK=  (비워서 mock 끄기)
+```
+
+### 배포 (production)
+
+```bash
+supabase login
+supabase link --project-ref <your-project-ref>
+supabase db push                       # 마이그레이션
+supabase functions deploy submit-report
+supabase functions deploy ingest-eat
+supabase functions deploy ingest-nts
+supabase functions deploy normalize-addresses
+supabase functions deploy recompute-clusters
+```
+
+`ingest-eat` / `recompute-clusters` 는 `pg_cron` 또는 GitHub Actions 스케줄로 일배치.
+
 ## 폴더 구조
 
 ```
