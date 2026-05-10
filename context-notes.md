@@ -237,7 +237,36 @@
 - `npm run test` — 14 files / 30 tests passed.
 - 4 high-risk 라우트 (`BSN-2026-0001~0004`) 모두 HTTP 200.
 
-**다음 — P08 학교별 보기 + 부산 지도**
-- `/schools` 부산 지도 + 마커 (의심 클러스터 응찰 빈도 색상)
-- `/schools/:code` 학교 메타 + 단골 응찰자 TOP 10 + 안전성 지수 (1-5 단계)
-- leaflet.markercluster (50 → 600개 확장 시)
+---
+
+## 2026-05-10 — P08 학교별 보기 + 부산 지도
+
+**구현**
+- `features/schools/aggregate.ts`
+  - `aggregateSchoolStats(bids, schoolCode, clusters)` — bidCount / totalWinAmount / avgParticipants / suspectBidCount / suspectWinCount.
+  - `safetyScore(stats)` — 의심 응찰 비율 ratio 기준 1~5 단계 + 한국어 설명.
+    - 0 또는 데이터 없음 → 5 / <0.1 → 4 / <0.25 → 3 / <0.5 → 2 / ≥0.5 → 1
+  - `topBidders(bids, schoolCode, clusters, topN=10)` — bizNo 별 wins/bids 집계 + 클러스터 매칭. 미등록 사업자도 마스킹 처리해 표시.
+- `features/schools/SafetyGauge.tsx` — 5칸 게이지 + 색상 매핑 (1=danger, 5=safe) + 설명.
+- `features/schools/SchoolListMap.tsx` — react-leaflet CircleMarker, 색상 = `suspectColor(count)` (없음 ink-faint / <3 warning / ≥3 danger). 선택 시 radius/weight 증가.
+- `features/schools/SchoolFilters.tsx` — 검색(이름·구) + 정렬(이름·구·의심응찰빈도) + 학교 리스트 (max-h 480 스크롤).
+- `features/schools/SchoolSummary.tsx` — 우측 카드. 메타 + 4스탯 + SafetyGauge + 상세 페이지 링크.
+- `features/schools/TopBidders.tsx` — TOP 10 테이블, 클러스터 소속 행은 `Link to /clusters/:id`.
+- `features/schools/SchoolBidHistory.tsx` — 시간순 응찰 (최근 30건). 의심 응찰 시 cluster ID 링크 + 의심 낙찰 배지.
+- `hooks/useSchool.ts` — `getSchool(code)` 단일 학교 hook (기존 useSchools 와 paralllel).
+- `pages/SchoolsPage.tsx` — 3-column 레이아웃 (260px filters / 1fr map / 360px summary). PageShell 의 sidebar 옵션 대신 자체 그리드.
+- `pages/SchoolDetailPage.tsx` — 메타 + 4스탯 + SafetyGauge + TOP 응찰자 + 응찰 이력 + 면책.
+
+**의도적 미구현**
+- **leaflet.markercluster 미설치** — 명세에 명시되어 있으나 50개 시드에서는 불필요(오히려 시각 손해). 600개 확장 시점에 도입. 한 줄로 시드 전환 가능 (`<MarkerClusterGroup>` 래핑).
+- **SafetyGauge 단위 테스트 미작성** — 명세 없음. 시각 검증 (4 학교 라우트 200 OK).
+
+**검증 (2026-05-10)**
+- `npm run typecheck` — 통과.
+- `npm run test` — 14 files / 30 tests passed.
+- `/schools`, `/schools/PSN-001`, `/schools/PSN-006`, `/schools/PSN-016` 모두 HTTP 200.
+
+**다음 — P09 판례 라이브러리**
+- `/cases` 죄명/결과/패턴/연도 필터 + 카드 그리드
+- `/cases/:id` 사실관계 구조화 + 증거 + 매칭 클러스터 추천 (matching.ts 역방향)
+- features/cases/* 컴포넌트 분리
