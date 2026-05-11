@@ -99,3 +99,19 @@ export interface School {
   lon: number
   studentCount: number
 }
+
+/**
+ * 발주·납품 이력 (학교 → 사업자 직거래 또는 정기 납품).
+ * 핵심: bid 의 winnerBizNo 가 X 인데 delivery 의 bizNo 가 Y → Y 는 X 의 분신 의심.
+ */
+export interface Delivery {
+  deliveryId: string
+  schoolCode: string
+  schoolName: string
+  district: string
+  bizNo: string                    // 실제 납품 사업자
+  date: string                     // 발주일 또는 납품일
+  category: string                 // 채소·육류·수산·공산품·과일
+  amount: number                   // 발주 금액 (원)
+  relatedBidId?: string            // 연결된 입찰 (있으면)
+}

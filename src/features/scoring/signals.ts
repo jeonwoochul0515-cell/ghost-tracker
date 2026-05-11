@@ -338,6 +338,51 @@ export const GEOGRAPHIC_MISMATCH: SignalDef = {
   },
 }
 
+export const CROSS_SCHOOL_DELIVERY: SignalDef = {
+  id: 'CROSS_SCHOOL_DELIVERY',
+  name: '낙찰 미참여 학교 납품',
+  description:
+    '본인은 낙찰받지 않은 학교에 납품했는데, 그 학교 낙찰자가 클러스터 내 다른 멤버 — 분신 운영 강력 시그널',
+  weight: 40,
+  level: 'S',
+  evaluate(ctx) {
+    if (!ctx.deliveries || ctx.deliveries.length === 0) return null
+    const memberSet = new Set(ctx.members.map((m) => m.bizNo))
+
+    // 학교별 클러스터 멤버 낙찰 매핑
+    const schoolWinners = new Map<string, Set<string>>() // schoolCode → winner bizNos (멤버만)
+    for (const bid of ctx.bids) {
+      if (bid.winnerBizNo && memberSet.has(bid.winnerBizNo)) {
+        const set = schoolWinners.get(bid.schoolCode) ?? new Set<string>()
+        set.add(bid.winnerBizNo)
+        schoolWinners.set(bid.schoolCode, set)
+      }
+    }
+
+    // 멤버 X 가 학교 Y 에 납품, Y 의 낙찰자는 멤버 X 가 아닌 다른 멤버
+    let crossCount = 0
+    const crossSchools = new Set<string>()
+    for (const d of ctx.deliveries) {
+      if (!memberSet.has(d.bizNo)) continue
+      const winners = schoolWinners.get(d.schoolCode)
+      if (!winners) continue
+      if (winners.has(d.bizNo)) continue // 본인이 낙찰
+      // 본인 외 멤버 중 낙찰자 있음 → cross
+      if (winners.size > 0) {
+        crossCount++
+        crossSchools.add(d.schoolCode)
+      }
+    }
+
+    if (crossCount < 3) return null
+    return makeResult(
+      this,
+      `타 멤버 낙찰 학교에 납품 ${crossCount}회`,
+      `${crossSchools.size}개 학교에서 클러스터 내 다른 사업자가 낙찰 → 본 사업자가 직접 납품 (분신 운영 강력 시그널)`,
+    )
+  },
+}
+
 export const SHORT_LIVED: SignalDef = {
   id: 'SHORT_LIVED',
   name: '단기 집중 후 폐업',
@@ -376,4 +421,5 @@ export const ALL_SIGNALS: SignalDef[] = [
   CATEGORY_OMNIVORE,
   GEOGRAPHIC_MISMATCH,
   SHORT_LIVED,
+  CROSS_SCHOOL_DELIVERY,
 ]

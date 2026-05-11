@@ -1,5 +1,5 @@
 // 스코어링 엔진 공용 타입
-import type { Bid, Business, SignalLevel } from '@/types/domain'
+import type { Bid, Business, Delivery, SignalLevel } from '@/types/domain'
 
 export interface MarketStats {
   /** 시장 평균 낙찰률 (0~1). 단순화로 1/평균 응찰자수 사용 권장. */
@@ -9,6 +9,7 @@ export interface MarketStats {
 export interface ClusterContext {
   members: Business[]                // 클러스터 멤버
   bids: Bid[]                        // 클러스터 멤버가 한 명이라도 참여한 입찰
+  deliveries?: Delivery[]            // 발주·납품 이력 (CROSS_SCHOOL_DELIVERY 신호용)
   marketStats?: MarketStats
   whitelist?: Set<string>            // 정규화 주소 화이트리스트 (도매시장 등)
 }
