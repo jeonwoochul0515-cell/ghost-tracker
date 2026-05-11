@@ -485,8 +485,85 @@
 
 ## 다음 단계 (Vol. 02 후보)
 
-- P13 어댑터 + Edge Function 결합 → 실 데이터 적재
+- ~~P13 어댑터 + Edge Function 결합 → 실 데이터 적재~~ (2026-05-11 완료)
 - 사법정보공유포털 API 인가 후 cases 시드 → 실 판례 교체
 - leaflet.markercluster 도입 (학교 50 → 600개)
 - ESLint 커스텀 룰 통합 (wording.ts 자동 검출)
 - 학부모용 모바일 앱 (Vol. 02 우선순위)
+
+---
+
+## 2026-05-11 — 실 데이터 모드 전환 + xls 600 거래처 통합물류 검출
+
+**환경 전환 (mock → 실 Supabase)**
+- Supabase CLI 2.98 을 devDependency 로 추가 (`npx supabase`).
+- Personal Access Token 으로 `supabase link --project-ref jjtsqkphxkxacmtauqzg`.
+- 프로덕션 프로젝트 (region: ap-northeast-2 Seoul).
+- 키 분리: `sb_publishable_*` (anon, 브라우저) vs `sb_secret_*` (service_role, Edge Function).
+- `.env` 의 `VITE_USE_MOCK=true` → 빈 값으로 전환.
+
+**마이그레이션 idempotent 화**
+- 001_init: `CREATE TABLE IF NOT EXISTS` + `CREATE SEQUENCE IF NOT EXISTS`
+- 002_indexes: `CREATE INDEX IF NOT EXISTS`
+- 003_rls: `DROP POLICY IF EXISTS` + `CREATE POLICY` 패턴
+- 004_seed: seed.sql 을 마이그레이션화 (ON CONFLICT)
+- 005_view_security: `ALTER VIEW businesses_public SET (security_invoker = off)` — anon 이 view 통해 마스킹된 결과 받도록 (PG 17+).
+- `supabase/config.toml`: `functions.verify_jwt` 를 함수별 `[functions.<name>]` 로 분리. `db.major_version = 17`.
+
+**DB ↔ 도메인 매핑 어댑터 (src/lib/supabase.ts)**
+- snake_case → camelCase 매핑: `listClusters` / `getCluster` / `listBids` / `listCourtCases` / `listSchools` / `listBusinessesByBizNos`.
+- clusters 의 `select('*, cluster_members(bizno, businesses_public(*))')` join 으로 멤버 채움.
+- `rowToCluster` / `rowToBid` / `rowToCourtCase` / `rowToSchool` 매핑 함수 분리.
+
+**Edge Functions 본격 구현 (P12 placeholder → 실 코드)**
+- `ingest-eat`: eaT API 페이징 fetch (100건/페이지 × 최대 100 페이지) + bids upsert + 새 bizno → businesses placeholder (`name='조회 대기'`).
+- `ingest-nts`: `name='조회 대기'` 자동 picked up (500개/회) + status batch + `b_stt_cd` 매핑 + raw_data 보존.
+- 5 functions deploy 완료.
+- secrets 등록: `PUBLIC_DATA_API_KEY` · `EAT_SERVICE_KEY` · `NTS_SERVICE_KEY` · `VWORLD_API_KEY`.
+
+**xls 600 거래처 적재 + 자동 클러스터링**
+- `scripts/analyze-xls.ts`: 동일주소·배송담당자·실무담당자·팩스·대표핸드폰 공유 그룹 추출.
+- `scripts/ingest-xls.ts`: xls 600 → Supabase businesses 적재 + `clusterBusinesses` + `scoreCluster` → clusters/cluster_members 자동 INSERT.
+- 결과: **의심 클러스터 39건 자동 생성** (high 10 + mid 6 + low 23).
+- 강서구 대저동 **통합물류 핫스팟** 정확 검출:
+  - 공항로1309 (11인, 100점) · 대저중앙로394 (11인, 100점) · 대저로155 (10인, 100점) · 대저로89 (7인, 100점) · 대저로135 (5인, 100점)
+  - + 80점 5건 (낙동북로108, 대저중앙로347, 공항로 1309 공백 변형, 대저중앙로357, 대저로221)
+- 거짓 양성 회피 결정:
+  - `clusterer` 3차(같은 성씨+같은 구) 비활성 (`familyMinSameSurname: 9999`) — 강서구 식자재 단지에서 거대 그룹 폭주 회피.
+  - `openDate` 합성 분산 (인덱스 기반 2018~2024) — INCEPTION_CLUSTER 오발화 방지.
+
+**새 신호 — CROSS_SCHOOL_DELIVERY (13번째)**
+- `types/domain.ts`: `Delivery` 인터페이스 추가.
+- `scoring/types.ts`: `ClusterContext.deliveries?` 옵션.
+- `scoring/signals.ts`: weight 40, level S — "본인 미낙찰 학교 + 같은 클러스터 다른 멤버 낙찰" 패턴.
+- 발주데이터 받으면 자동 활성화.
+- `MethodologyPage` 가 `ALL_SIGNALS` 사용해 자동 노출.
+
+**코드 스플릿 (perf)**
+- `src/App.tsx`: 13 페이지 모두 `React.lazy` + `Suspense`.
+- `vite.config.ts` `rolldownOptions.manualChunks`: recharts / leaflet / supabase / forms 분리.
+- `useAuth.ts`: 무의미한 dynamic import 제거.
+- **단일 1,032 KB / gzip 289 KB → 초기 87 KB gzip (75% 감소)**, 23 청크.
+
+**Cloudflare Pages 자동 배포**
+- `public/_redirects` (SPA fallback) + `public/_headers` (보안 헤더 4종).
+- `wrangler pages project create ghost-tracker` + 첫 deploy.
+- `.github/workflows/deploy.yml`: Vercel → Cloudflare Pages (`cloudflare/wrangler-action@v3`) 교체. `verify` job(typecheck+test) 통과 시 cloudflare job 실행.
+- GitHub Secret 등록: `CLOUDFLARE_ACCOUNT_ID`.
+- 사용자 측 등록 대기: `CLOUDFLARE_API_TOKEN`.
+
+**현재 상태 스냅샷 (2026-05-11)**
+- Supabase: businesses **629** (시드 29 + xls 600), clusters **51** (시드 12 + 자동 39), bids 536, schools 50, court_cases 8.
+- Cloudflare: https://ghost-tracker.pages.dev/ (HTTP 200, 영구 URL).
+- dev 서버 실 DB 모드 동작 중.
+
+**보류 중 (외부 의존)**
+- OneDrive 발주데이터 — anonymous 접근 401/403. 사용자 로컬 다운로드 후 경로 필요.
+- eaT API 활용신청 후 활성화 대기 (1시간).
+- NTS API 활성화 대기 중 (2026-05-10 신청).
+- JUSO_API_KEY 별도 발급 대기.
+- 사법정보공유포털 인가 진행 중.
+
+**의도적 미구현**
+- **phone/fax 공유 신호** — xls 분석에서 가장 강력했지만 `Business` 도메인에 phone 필드 없음. raw_data jsonb 보존만. 후속으로 `SHARED_PHONE` / `SHARED_FAX` 신호 추가 검토.
+- **recompute-clusters Edge Function 본격 구현** — 현재 placeholder. features/scoring/* 를 Deno 호환 mirror 필요. xls 처럼 외부 스크립트로 우회 가능해 우선순위 낮음.
