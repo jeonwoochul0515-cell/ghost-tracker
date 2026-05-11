@@ -46,5 +46,11 @@ supabase/.branches/
 # Claude Code (개인 로컬 설정)
 .claude/
 
+# 작업용 자료 (개인 자료, 커밋 안 함)
+*.xls
+*.xlsx
+image.png
+*.tmp.*
+
 # Build artifacts
 *.tsbuildinfo

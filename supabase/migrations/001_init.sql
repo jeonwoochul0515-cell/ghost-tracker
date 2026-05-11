@@ -2,7 +2,7 @@
 -- 8 테이블 + REPORT-YYYY-XXXX 시퀀스. Snake_case 컬럼.
 
 -- ─── businesses ───────────────────────────────────────────────────────
-CREATE TABLE businesses (
+CREATE TABLE IF NOT EXISTS businesses (
   bizno              TEXT PRIMARY KEY,
   name               TEXT NOT NULL,
   rep_name           TEXT,
@@ -18,7 +18,7 @@ CREATE TABLE businesses (
 );
 
 -- ─── bids ─────────────────────────────────────────────────────────────
-CREATE TABLE bids (
+CREATE TABLE IF NOT EXISTS bids (
   id              TEXT PRIMARY KEY,
   school_code     TEXT,
   school_name     TEXT,
@@ -33,7 +33,7 @@ CREATE TABLE bids (
 );
 
 -- ─── schools ──────────────────────────────────────────────────────────
-CREATE TABLE schools (
+CREATE TABLE IF NOT EXISTS schools (
   code          TEXT PRIMARY KEY,
   name          TEXT NOT NULL,
   address       TEXT,
@@ -44,7 +44,7 @@ CREATE TABLE schools (
 );
 
 -- ─── clusters ─────────────────────────────────────────────────────────
-CREATE TABLE clusters (
+CREATE TABLE IF NOT EXISTS clusters (
   id             TEXT PRIMARY KEY,
   district       TEXT,
   location_label TEXT,
@@ -58,7 +58,7 @@ CREATE TABLE clusters (
 );
 
 -- ─── cluster_members (composite PK) ───────────────────────────────────
-CREATE TABLE cluster_members (
+CREATE TABLE IF NOT EXISTS cluster_members (
   cluster_id TEXT NOT NULL REFERENCES clusters(id) ON DELETE CASCADE,
   bizno      TEXT NOT NULL REFERENCES businesses(bizno) ON DELETE CASCADE,
   joined_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -66,7 +66,7 @@ CREATE TABLE cluster_members (
 );
 
 -- ─── court_cases ──────────────────────────────────────────────────────
-CREATE TABLE court_cases (
+CREATE TABLE IF NOT EXISTS court_cases (
   id             TEXT PRIMARY KEY,
   court          TEXT,
   verdict        TEXT NOT NULL CHECK (verdict IN ('유죄', '무죄', '일부유죄')),
@@ -79,9 +79,9 @@ CREATE TABLE court_cases (
 );
 
 -- ─── reports (REPORT-YYYY-XXXX 자동 ID) ───────────────────────────────
-CREATE SEQUENCE reports_seq START 1;
+CREATE SEQUENCE IF NOT EXISTS reports_seq START 1;
 
-CREATE TABLE reports (
+CREATE TABLE IF NOT EXISTS reports (
   id                TEXT PRIMARY KEY DEFAULT
                     'REPORT-' || EXTRACT(YEAR FROM NOW())::TEXT
                     || '-' || LPAD(NEXTVAL('reports_seq')::TEXT, 4, '0'),
@@ -96,7 +96,7 @@ CREATE TABLE reports (
 );
 
 -- ─── whitelist_addresses ──────────────────────────────────────────────
-CREATE TABLE whitelist_addresses (
+CREATE TABLE IF NOT EXISTS whitelist_addresses (
   address_normalized TEXT PRIMARY KEY,
   reason             TEXT,
   added_by           TEXT,

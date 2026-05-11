@@ -11,7 +11,7 @@ max_rows = 1000
 [db]
 port = 54322
 shadow_port = 54320
-major_version = 15
+major_version = 17
 
 [studio]
 enabled = true
@@ -37,5 +37,18 @@ enable_confirmations = false
 enabled = true
 policy = "oneshot"
 
-[functions]
-verify_jwt = false  # public functions (submit-report 등)
+# Edge Functions 함수별 설정 — verify_jwt 는 함수마다 명시.
+[functions.submit-report]
+verify_jwt = false
+
+[functions.ingest-eat]
+verify_jwt = false
+
+[functions.ingest-nts]
+verify_jwt = false
+
+[functions.normalize-addresses]
+verify_jwt = false
+
+[functions.recompute-clusters]
+verify_jwt = false
